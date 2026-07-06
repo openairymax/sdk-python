@@ -277,7 +277,7 @@ class HookPlugin(BasePlugin, ABC):
     """Base class for Hook-type plugins.
 
     Hook plugins intercept agent lifecycle events (defined in
-    ecosystem/hooks/__init__.py) and can modify or block operations.
+    agentrt/hooks/__init__.py) and can modify or block operations.
 
     Implement on_<event> methods for the events you want to handle.
 
