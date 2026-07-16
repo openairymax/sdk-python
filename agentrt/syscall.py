@@ -80,28 +80,28 @@ class SyscallProxy:
     """
 
     FUNCTION_MAPPINGS = {
-        'task_submit': 'agentrt_sys_task_submit',
-        'task_query': 'agentrt_sys_task_query',
-        'task_wait': 'agentrt_sys_task_wait',
-        'task_cancel': 'agentrt_sys_task_cancel',
-        'memory_write': 'agentrt_sys_memory_write',
-        'memory_get': 'agentrt_sys_memory_get',
-        'memory_search': 'agentrt_sys_memory_search',
-        'memory_delete': 'agentrt_sys_memory_delete',
-        'session_create': 'agentrt_sys_session_create',
-        'session_get': 'agentrt_sys_session_get',
-        'session_close': 'agentrt_sys_session_close',
-        'session_list': 'agentrt_sys_session_list',
-        'skill_install': 'agentrt_sys_skill_install',
-        'skill_execute': 'agentrt_sys_skill_execute',
-        'skill_list': 'agentrt_sys_skill_list',
-        'skill_uninstall': 'agentrt_sys_skill_uninstall',
-        'telemetry_metrics': 'agentrt_sys_telemetry_metrics',
-        'telemetry_traces': 'agentrt_sys_telemetry_traces',
-        'agent_spawn': 'agentrt_sys_agent_spawn',
-        'agent_terminate': 'agentrt_sys_agent_terminate',
-        'agent_invoke': 'agentrt_sys_agent_invoke',
-        'agent_list': 'agentrt_sys_agent_list',
+        'task_submit': 'airy_sys_task_submit',
+        'task_query': 'airy_sys_task_query',
+        'task_wait': 'airy_sys_task_wait',
+        'task_cancel': 'airy_sys_task_cancel',
+        'memory_write': 'airy_sys_memory_write',
+        'memory_get': 'airy_sys_memory_get',
+        'memory_search': 'airy_sys_memory_search',
+        'memory_delete': 'airy_sys_memory_delete',
+        'session_create': 'airy_sys_session_create',
+        'session_get': 'airy_sys_session_get',
+        'session_close': 'airy_sys_session_close',
+        'session_list': 'airy_sys_session_list',
+        'skill_install': 'airy_sys_skill_install',
+        'skill_execute': 'airy_sys_skill_execute',
+        'skill_list': 'airy_sys_skill_list',
+        'skill_uninstall': 'airy_sys_skill_uninstall',
+        'telemetry_metrics': 'airy_sys_telemetry_metrics',
+        'telemetry_traces': 'airy_sys_telemetry_traces',
+        'agent_spawn': 'airy_sys_agent_spawn',
+        'agent_terminate': 'airy_sys_agent_terminate',
+        'agent_invoke': 'airy_sys_agent_invoke',
+        'agent_list': 'airy_sys_agent_list',
     }
 
     ERROR_HANDLERS = {
@@ -194,126 +194,126 @@ class SyscallProxy:
         if not self._lib:
             return
 
-        # agentrt_syscalls_init(void) -> agentrt_error_t (int)
-        self._lib.agentrt_syscalls_init.argtypes = []
-        self._lib.agentrt_syscalls_init.restype = c_int
+        # airy_syscalls_init(void) -> agentrt_error_t (int)
+        self._lib.airy_syscalls_init.argtypes = []
+        self._lib.airy_syscalls_init.restype = c_int
 
-        # agentrt_syscalls_cleanup(void) -> void
-        self._lib.agentrt_syscalls_cleanup.argtypes = []
-        self._lib.agentrt_syscalls_cleanup.restype = None
+        # airy_syscalls_cleanup(void) -> void
+        self._lib.airy_syscalls_cleanup.argtypes = []
+        self._lib.airy_syscalls_cleanup.restype = None
 
-        # agentrt_sys_task_submit(const char* input, size_t input_len, uint32_t timeout_ms, char** out_output) -> int
-        self._lib.agentrt_sys_task_submit.argtypes = [
+        # airy_sys_task_submit(const char* input, size_t input_len, uint32_t timeout_ms, char** out_output) -> int
+        self._lib.airy_sys_task_submit.argtypes = [
             c_char_p, c_size_t, c_uint32, POINTER(c_char_p)]
-        self._lib.agentrt_sys_task_submit.restype = c_int
+        self._lib.airy_sys_task_submit.restype = c_int
 
-        # agentrt_sys_task_query(const char* task_id, int* out_status) -> int
-        self._lib.agentrt_sys_task_query.argtypes = [
+        # airy_sys_task_query(const char* task_id, int* out_status) -> int
+        self._lib.airy_sys_task_query.argtypes = [
             c_char_p, POINTER(c_int)]
-        self._lib.agentrt_sys_task_query.restype = c_int
+        self._lib.airy_sys_task_query.restype = c_int
 
-        # agentrt_sys_task_wait(const char* task_id, uint32_t timeout_ms, char** out_result) -> int
-        self._lib.agentrt_sys_task_wait.argtypes = [
+        # airy_sys_task_wait(const char* task_id, uint32_t timeout_ms, char** out_result) -> int
+        self._lib.airy_sys_task_wait.argtypes = [
             c_char_p, c_uint32, POINTER(c_char_p)]
-        self._lib.agentrt_sys_task_wait.restype = c_int
+        self._lib.airy_sys_task_wait.restype = c_int
 
-        # agentrt_sys_task_cancel(const char* task_id) -> int
-        self._lib.agentrt_sys_task_cancel.argtypes = [c_char_p]
-        self._lib.agentrt_sys_task_cancel.restype = c_int
+        # airy_sys_task_cancel(const char* task_id) -> int
+        self._lib.airy_sys_task_cancel.argtypes = [c_char_p]
+        self._lib.airy_sys_task_cancel.restype = c_int
 
-        # agentrt_sys_memory_write(const void* data, size_t len, const char* metadata, char** out_record_id) -> int
-        self._lib.agentrt_sys_memory_write.argtypes = [
+        # airy_sys_memory_write(const void* data, size_t len, const char* metadata, char** out_record_id) -> int
+        self._lib.airy_sys_memory_write.argtypes = [
             c_void_p, c_size_t, c_char_p, POINTER(c_char_p)]
-        self._lib.agentrt_sys_memory_write.restype = c_int
+        self._lib.airy_sys_memory_write.restype = c_int
 
-        # agentrt_sys_memory_search(const char* query, uint32_t limit, char*** out_record_ids, float** out_scores, size_t* out_count) -> int
-        self._lib.agentrt_sys_memory_search.argtypes = [
+        # airy_sys_memory_search(const char* query, uint32_t limit, char*** out_record_ids, float** out_scores, size_t* out_count) -> int
+        self._lib.airy_sys_memory_search.argtypes = [
             c_char_p, c_uint32, POINTER(POINTER(c_char_p)), POINTER(POINTER(c_float)), POINTER(c_size_t)]
-        self._lib.agentrt_sys_memory_search.restype = c_int
+        self._lib.airy_sys_memory_search.restype = c_int
 
-        # agentrt_sys_memory_get(const char* record_id, void** out_data, size_t* out_len) -> int
-        self._lib.agentrt_sys_memory_get.argtypes = [
+        # airy_sys_memory_get(const char* record_id, void** out_data, size_t* out_len) -> int
+        self._lib.airy_sys_memory_get.argtypes = [
             c_char_p, POINTER(c_void_p), POINTER(c_size_t)]
-        self._lib.agentrt_sys_memory_get.restype = c_int
+        self._lib.airy_sys_memory_get.restype = c_int
 
-        # agentrt_sys_memory_delete(const char* record_id) -> int
-        self._lib.agentrt_sys_memory_delete.argtypes = [c_char_p]
-        self._lib.agentrt_sys_memory_delete.restype = c_int
+        # airy_sys_memory_delete(const char* record_id) -> int
+        self._lib.airy_sys_memory_delete.argtypes = [c_char_p]
+        self._lib.airy_sys_memory_delete.restype = c_int
 
-        # agentrt_sys_session_create(const char* metadata, char** out_session_id) -> int
-        self._lib.agentrt_sys_session_create.argtypes = [
+        # airy_sys_session_create(const char* metadata, char** out_session_id) -> int
+        self._lib.airy_sys_session_create.argtypes = [
             c_char_p, POINTER(c_char_p)]
-        self._lib.agentrt_sys_session_create.restype = c_int
+        self._lib.airy_sys_session_create.restype = c_int
 
-        # agentrt_sys_session_get(const char* session_id, char** out_info) -> int
-        self._lib.agentrt_sys_session_get.argtypes = [
+        # airy_sys_session_get(const char* session_id, char** out_info) -> int
+        self._lib.airy_sys_session_get.argtypes = [
             c_char_p, POINTER(c_char_p)]
-        self._lib.agentrt_sys_session_get.restype = c_int
+        self._lib.airy_sys_session_get.restype = c_int
 
-        # agentrt_sys_session_close(const char* session_id) -> int
-        self._lib.agentrt_sys_session_close.argtypes = [c_char_p]
-        self._lib.agentrt_sys_session_close.restype = c_int
+        # airy_sys_session_close(const char* session_id) -> int
+        self._lib.airy_sys_session_close.argtypes = [c_char_p]
+        self._lib.airy_sys_session_close.restype = c_int
 
-        # agentrt_sys_session_list(char*** out_sessions, size_t* out_count) -> int
-        self._lib.agentrt_sys_session_list.argtypes = [
+        # airy_sys_session_list(char*** out_sessions, size_t* out_count) -> int
+        self._lib.airy_sys_session_list.argtypes = [
             POINTER(POINTER(c_char_p)), POINTER(c_size_t)]
-        self._lib.agentrt_sys_session_list.restype = c_int
+        self._lib.airy_sys_session_list.restype = c_int
 
-        # agentrt_sys_session_get_persist_status(const char* session_id, int* out_status, int* out_error) -> int
-        self._lib.agentrt_sys_session_get_persist_status.argtypes = [
+        # airy_sys_session_get_persist_status(const char* session_id, int* out_status, int* out_error) -> int
+        self._lib.airy_sys_session_get_persist_status.argtypes = [
             c_char_p, POINTER(c_int), POINTER(c_int)]
-        self._lib.agentrt_sys_session_get_persist_status.restype = c_int
+        self._lib.airy_sys_session_get_persist_status.restype = c_int
 
-        # agentrt_sys_telemetry_metrics(char** out_metrics) -> int
-        self._lib.agentrt_sys_telemetry_metrics.argtypes = [POINTER(c_char_p)]
-        self._lib.agentrt_sys_telemetry_metrics.restype = c_int
+        # airy_sys_telemetry_metrics(char** out_metrics) -> int
+        self._lib.airy_sys_telemetry_metrics.argtypes = [POINTER(c_char_p)]
+        self._lib.airy_sys_telemetry_metrics.restype = c_int
 
-        # agentrt_sys_telemetry_traces(const char* trace_id, char** out_spans) -> int
-        self._lib.agentrt_sys_telemetry_traces.argtypes = [
+        # airy_sys_telemetry_traces(const char* trace_id, char** out_spans) -> int
+        self._lib.airy_sys_telemetry_traces.argtypes = [
             c_char_p, POINTER(c_char_p)]
-        self._lib.agentrt_sys_telemetry_traces.restype = c_int
+        self._lib.airy_sys_telemetry_traces.restype = c_int
 
-        # agentrt_sys_agent_spawn(const char* agent_spec, char** out_agent_id) -> int
-        self._lib.agentrt_sys_agent_spawn.argtypes = [
+        # airy_sys_agent_spawn(const char* agent_spec, char** out_agent_id) -> int
+        self._lib.airy_sys_agent_spawn.argtypes = [
             c_char_p, POINTER(c_char_p)]
-        self._lib.agentrt_sys_agent_spawn.restype = c_int
+        self._lib.airy_sys_agent_spawn.restype = c_int
 
-        # agentrt_sys_agent_terminate(const char* agent_id) -> int
-        self._lib.agentrt_sys_agent_terminate.argtypes = [c_char_p]
-        self._lib.agentrt_sys_agent_terminate.restype = c_int
+        # airy_sys_agent_terminate(const char* agent_id) -> int
+        self._lib.airy_sys_agent_terminate.argtypes = [c_char_p]
+        self._lib.airy_sys_agent_terminate.restype = c_int
 
-        # agentrt_sys_agent_invoke(const char* agent_id, const char* input, size_t input_len, char** out_output) -> int
-        self._lib.agentrt_sys_agent_invoke.argtypes = [
+        # airy_sys_agent_invoke(const char* agent_id, const char* input, size_t input_len, char** out_output) -> int
+        self._lib.airy_sys_agent_invoke.argtypes = [
             c_char_p, c_char_p, c_size_t, POINTER(c_char_p)]
-        self._lib.agentrt_sys_agent_invoke.restype = c_int
+        self._lib.airy_sys_agent_invoke.restype = c_int
 
-        # agentrt_sys_agent_list(char*** out_agent_ids, size_t* out_count) -> int
-        self._lib.agentrt_sys_agent_list.argtypes = [
+        # airy_sys_agent_list(char*** out_agent_ids, size_t* out_count) -> int
+        self._lib.airy_sys_agent_list.argtypes = [
             POINTER(POINTER(c_char_p)), POINTER(c_size_t)]
-        self._lib.agentrt_sys_agent_list.restype = c_int
+        self._lib.airy_sys_agent_list.restype = c_int
 
-        # agentrt_sys_skill_install(const char* skill_url, char** out_skill_id) -> int
-        self._lib.agentrt_sys_skill_install.argtypes = [
+        # airy_sys_skill_install(const char* skill_url, char** out_skill_id) -> int
+        self._lib.airy_sys_skill_install.argtypes = [
             c_char_p, POINTER(c_char_p)]
-        self._lib.agentrt_sys_skill_install.restype = c_int
+        self._lib.airy_sys_skill_install.restype = c_int
 
-        # agentrt_sys_skill_execute(const char* skill_id, const char* input, char** out_output) -> int
-        self._lib.agentrt_sys_skill_execute.argtypes = [
+        # airy_sys_skill_execute(const char* skill_id, const char* input, char** out_output) -> int
+        self._lib.airy_sys_skill_execute.argtypes = [
             c_char_p, c_char_p, POINTER(c_char_p)]
-        self._lib.agentrt_sys_skill_execute.restype = c_int
+        self._lib.airy_sys_skill_execute.restype = c_int
 
-        # agentrt_sys_skill_list(char*** out_skills, size_t* out_count) -> int
-        self._lib.agentrt_sys_skill_list.argtypes = [
+        # airy_sys_skill_list(char*** out_skills, size_t* out_count) -> int
+        self._lib.airy_sys_skill_list.argtypes = [
             POINTER(POINTER(c_char_p)), POINTER(c_size_t)]
-        self._lib.agentrt_sys_skill_list.restype = c_int
+        self._lib.airy_sys_skill_list.restype = c_int
 
-        # agentrt_sys_skill_uninstall(const char* skill_id) -> int
-        self._lib.agentrt_sys_skill_uninstall.argtypes = [c_char_p]
-        self._lib.agentrt_sys_skill_uninstall.restype = c_int
+        # airy_sys_skill_uninstall(const char* skill_id) -> int
+        self._lib.airy_sys_skill_uninstall.argtypes = [c_char_p]
+        self._lib.airy_sys_skill_uninstall.restype = c_int
 
-        # agentrt_sys_free(void* ptr) -> void
-        self._lib.agentrt_sys_free.argtypes = [c_void_p]
-        self._lib.agentrt_sys_free.restype = None
+        # airy_sys_free(void* ptr) -> void
+        self._lib.airy_sys_free.argtypes = [c_void_p]
+        self._lib.airy_sys_free.restype = None
 
         logger.debug("Function signatures configured successfully")
 
@@ -366,7 +366,7 @@ class SyscallProxy:
             try:
                 p = c_void_p(ctypes.cast(ptr, c_void_p).value) if ptr else None
                 if p:
-                    self._lib.agentrt_sys_free(p)
+                    self._lib.airy_sys_free(p)
             except Exception as e:
                 logger.warning(f"Failed to free C memory: {e}")
 
@@ -386,12 +386,12 @@ class SyscallProxy:
 
     def init(self) -> None:
         with self._lock:
-            error_code = self._lib.agentrt_syscalls_init()
+            error_code = self._lib.airy_syscalls_init()
             self._check_error(error_code, "syscalls_init")
 
     def cleanup(self) -> None:
         with self._lock:
-            self._lib.agentrt_syscalls_cleanup()
+            self._lib.airy_syscalls_cleanup()
 
     # =========================================================================
     # Task management
@@ -408,7 +408,7 @@ class SyscallProxy:
             input_bytes = input_data.encode('utf-8')
             result = c_char_p()
 
-            error_code = self._lib.agentrt_sys_task_submit(
+            error_code = self._lib.airy_sys_task_submit(
                 input_bytes, len(input_bytes), timeout_ms, byref(result)
             )
 
@@ -427,7 +427,7 @@ class SyscallProxy:
                 raise ValidationError(message="Invalid task_id", cause=None)
 
             status = c_int()
-            error_code = self._lib.agentrt_sys_task_query(
+            error_code = self._lib.airy_sys_task_query(
                 task_id.encode('utf-8'), byref(status)
             )
 
@@ -440,7 +440,7 @@ class SyscallProxy:
                 raise ValidationError(message="Invalid task_id", cause=None)
 
             result = c_char_p()
-            error_code = self._lib.agentrt_sys_task_wait(
+            error_code = self._lib.airy_sys_task_wait(
                 task_id.encode('utf-8'), timeout_ms, byref(result)
             )
 
@@ -457,7 +457,7 @@ class SyscallProxy:
             if not task_id or not isinstance(task_id, str):
                 raise ValidationError(message="Invalid task_id", cause=None)
 
-            error_code = self._lib.agentrt_sys_task_cancel(
+            error_code = self._lib.airy_sys_task_cancel(
                 task_id.encode('utf-8')
             )
 
@@ -477,7 +477,7 @@ class SyscallProxy:
             record_id = c_char_p()
             metadata_bytes = metadata.encode('utf-8') if metadata else None
 
-            error_code = self._lib.agentrt_sys_memory_write(
+            error_code = self._lib.airy_sys_memory_write(
                 data, len(data), metadata_bytes, byref(record_id)
             )
 
@@ -498,7 +498,7 @@ class SyscallProxy:
             data = c_void_p()
             length = c_size_t()
 
-            error_code = self._lib.agentrt_sys_memory_get(
+            error_code = self._lib.airy_sys_memory_get(
                 record_id.encode('utf-8'), byref(data), byref(length)
             )
 
@@ -517,7 +517,7 @@ class SyscallProxy:
             scores = POINTER(c_float)()
             count = c_size_t()
 
-            error_code = self._lib.agentrt_sys_memory_search(
+            error_code = self._lib.airy_sys_memory_search(
                 query.encode('utf-8'), limit, byref(record_ids), byref(scores), byref(count)
             )
 
@@ -546,7 +546,7 @@ class SyscallProxy:
             if not record_id or not isinstance(record_id, str):
                 raise ValidationError(message="Invalid record_id", cause=None)
 
-            error_code = self._lib.agentrt_sys_memory_delete(
+            error_code = self._lib.airy_sys_memory_delete(
                 record_id.encode('utf-8')
             )
 
@@ -563,7 +563,7 @@ class SyscallProxy:
             session_id = c_char_p()
             metadata_bytes = metadata.encode('utf-8') if metadata else None
 
-            error_code = self._lib.agentrt_sys_session_create(
+            error_code = self._lib.airy_sys_session_create(
                 metadata_bytes, byref(session_id)
             )
 
@@ -579,7 +579,7 @@ class SyscallProxy:
                 raise ValidationError(message="Invalid session_id", cause=None)
 
             info = c_char_p()
-            error_code = self._lib.agentrt_sys_session_get(
+            error_code = self._lib.airy_sys_session_get(
                 session_id.encode('utf-8'), byref(info)
             )
 
@@ -594,7 +594,7 @@ class SyscallProxy:
             if not session_id or not isinstance(session_id, str):
                 raise ValidationError(message="Invalid session_id", cause=None)
 
-            error_code = self._lib.agentrt_sys_session_close(
+            error_code = self._lib.airy_sys_session_close(
                 session_id.encode('utf-8')
             )
 
@@ -607,7 +607,7 @@ class SyscallProxy:
             sessions = POINTER(c_char_p)()
             count = c_size_t()
 
-            error_code = self._lib.agentrt_sys_session_list(
+            error_code = self._lib.airy_sys_session_list(
                 byref(sessions), byref(count)
             )
 
@@ -635,7 +635,7 @@ class SyscallProxy:
                 raise ValidationError(message="Invalid skill_url", cause=None)
 
             skill_id = c_char_p()
-            error_code = self._lib.agentrt_sys_skill_install(
+            error_code = self._lib.airy_sys_skill_install(
                 skill_url.encode('utf-8'), byref(skill_id)
             )
 
@@ -657,7 +657,7 @@ class SyscallProxy:
                 raise ValidationError(message="Invalid skill parameters", cause=e)
 
             result = c_char_p()
-            error_code = self._lib.agentrt_sys_skill_execute(
+            error_code = self._lib.airy_sys_skill_execute(
                 skill_id.encode('utf-8'), params.encode('utf-8'), byref(result)
             )
 
@@ -674,7 +674,7 @@ class SyscallProxy:
             skills = POINTER(c_char_p)()
             count = c_size_t()
 
-            error_code = self._lib.agentrt_sys_skill_list(
+            error_code = self._lib.airy_sys_skill_list(
                 byref(skills), byref(count)
             )
 
@@ -696,7 +696,7 @@ class SyscallProxy:
             if not skill_id or not isinstance(skill_id, str):
                 raise ValidationError(message="Invalid skill_id", cause=None)
 
-            error_code = self._lib.agentrt_sys_skill_uninstall(
+            error_code = self._lib.airy_sys_skill_uninstall(
                 skill_id.encode('utf-8')
             )
 
@@ -714,7 +714,7 @@ class SyscallProxy:
                 raise ValidationError(message="Invalid agent_spec", cause=None)
 
             agent_id = c_char_p()
-            error_code = self._lib.agentrt_sys_agent_spawn(
+            error_code = self._lib.airy_sys_agent_spawn(
                 agent_spec.encode('utf-8'), byref(agent_id)
             )
 
@@ -729,7 +729,7 @@ class SyscallProxy:
             if not agent_id or not isinstance(agent_id, str):
                 raise ValidationError(message="Invalid agent_id", cause=None)
 
-            error_code = self._lib.agentrt_sys_agent_terminate(
+            error_code = self._lib.airy_sys_agent_terminate(
                 agent_id.encode('utf-8')
             )
 
@@ -744,7 +744,7 @@ class SyscallProxy:
             input_bytes = input_data.encode('utf-8')
             result = c_char_p()
 
-            error_code = self._lib.agentrt_sys_agent_invoke(
+            error_code = self._lib.airy_sys_agent_invoke(
                 agent_id.encode('utf-8'), input_bytes, len(input_bytes), byref(result)
             )
 
@@ -759,7 +759,7 @@ class SyscallProxy:
             agent_ids = POINTER(c_char_p)()
             count = c_size_t()
 
-            error_code = self._lib.agentrt_sys_agent_list(
+            error_code = self._lib.airy_sys_agent_list(
                 byref(agent_ids), byref(count)
             )
 
@@ -783,7 +783,7 @@ class SyscallProxy:
     def telemetry_metrics(self) -> str:
         with self._lock:
             metrics = c_char_p()
-            error_code = self._lib.agentrt_sys_telemetry_metrics(
+            error_code = self._lib.airy_sys_telemetry_metrics(
                 byref(metrics))
 
             self._check_error(error_code, "telemetry_metrics")
@@ -798,7 +798,7 @@ class SyscallProxy:
                 raise ValidationError(message="Invalid trace_id", cause=None)
 
             spans = c_char_p()
-            error_code = self._lib.agentrt_sys_telemetry_traces(
+            error_code = self._lib.airy_sys_telemetry_traces(
                 trace_id.encode('utf-8'), byref(spans)
             )
 
