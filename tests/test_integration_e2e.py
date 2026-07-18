@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+# SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 # AgentRT SDK 端到端集成测试
 # 验证: Config→Client→Modules→Plugin→ErrorHandling 完整链路
 # Version: 0.1.0

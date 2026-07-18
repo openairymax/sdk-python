@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+# SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 # AgentRT SDK 跨平台兼容性测试
 # 验证: Python/Node/Go/Rust 版本兼容 + 导入链 + 编译矩阵
 # Version: 0.1.0

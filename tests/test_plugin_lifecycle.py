@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+# SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 # AgentRT PluginSDK 生命周期测试
 # 验证: 注册→发现→加载→调用→卸载 完整生命周期
 
