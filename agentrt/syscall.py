@@ -26,7 +26,10 @@ Example:
 """
 
 import ctypes
+import errno
+import json
 import os
+import socket
 import sys
 import time
 import logging
@@ -58,6 +61,19 @@ from .exceptions import (
 logger = logging.getLogger(__name__)
 
 
+# ── IPC 后端常量 ────────────────────────────────────────────────────────
+# 与 agentrt/commons/platform/include/platform.h:130 AIRY_RUNTIME_DIR 对齐
+# 与 agentrt/gateway/src/utils/syscall_router.c:38,41 socket 路径对齐
+_DEFAULT_RUNTIME_DIR = os.environ.get("AIRY_RUNTIME_DIR", "/tmp/agentrt")
+_MEM_D_SOCKET = os.environ.get("AIRY_MEM_D_SOCKET", f"{_DEFAULT_RUNTIME_DIR}/mem.sock")
+_AGENT_D_SOCKET = os.environ.get("AIRY_AGENT_D_SOCKET", f"{_DEFAULT_RUNTIME_DIR}/agent.sock")
+
+# 偶发 BrokenPipe 重试次数（daemon EPOLLET + MSG_DONTWAIT 时序窗口）
+_IPC_MAX_RETRIES = 3
+_IPC_RETRY_BACKOFF_S = 0.05
+_IPC_DEFAULT_TIMEOUT_S = 30.0
+
+
 class SyscallError(_ExceptionsSyscallError):
     """FFI binding error with extended context information."""
 
@@ -65,6 +81,210 @@ class SyscallError(_ExceptionsSyscallError):
         super().__init__(message=message, cause=None)
         self.error_code_int = error_code
         self.context = context or {}
+
+
+class _IpcBackend:
+    """Unix-socket + JSON-RPC 2.0 后端。
+
+    直连 mem_d / agent_d 守护进程，不依赖 libagentrt.so
+    （agentrt 当前将 libagentrt 构建为 STATIC，未生成 .so）。
+
+    协议对齐 ``daemons/common/src/daemon_rpc_client.c`` 与
+    ``gateway/src/utils/syscall_router.c`` 中 airy_sys_*_ipc 调用：
+
+      connect AF_UNIX → send {"jsonrpc":"2.0","method":<m>,"params":{...},"id":1}
+      → 循环 recv 至 JSON 完整 → 提取 result 字段
+
+    mem_d 方法：write / search / get / delete
+    agent_d 方法：spawn / terminate / invoke / list
+    """
+
+    def __init__(self,
+                 mem_socket: str = _MEM_D_SOCKET,
+                 agent_socket: str = _AGENT_D_SOCKET,
+                 timeout_s: float = _IPC_DEFAULT_TIMEOUT_S):
+        self._mem_socket = mem_socket
+        self._agent_socket = agent_socket
+        self._timeout_s = timeout_s
+        self._lock = threading.Lock()
+
+    # ── 底层 JSON-RPC 调用 ──────────────────────────────
+    def _call(self, socket_path: str, method: str, params: Any) -> Any:
+        """发起一次 JSON-RPC 调用并返回 result 字段（已解析为 Python 对象）。
+
+        对偶发 BrokenPipeError / ConnectionResetError 做指数退避重试，
+        规避 daemon EPOLLET + MSG_DONTWAIT 在 accept 后 recv 暂未读到数据的
+        时序窗口（参见 platform_compat.c:535 airy_sock_recv 实现）。
+        """
+        request = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params if isinstance(params, dict) else {},
+            "id": 1,
+        }
+        payload = json.dumps(request, ensure_ascii=False).encode("utf-8")
+
+        last_exc: Optional[Exception] = None
+        for attempt in range(_IPC_MAX_RETRIES + 1):
+            try:
+                return self._call_once(socket_path, payload)
+            except (BrokenPipeError, ConnectionResetError, ConnectionRefusedError) as e:
+                last_exc = e
+                if attempt < _IPC_MAX_RETRIES:
+                    time.sleep(_IPC_RETRY_BACKOFF_S * (attempt + 1))
+                    continue
+                break
+            except socket.timeout as e:
+                last_exc = e
+                if attempt < _IPC_MAX_RETRIES:
+                    time.sleep(_IPC_RETRY_BACKOFF_S * (attempt + 1))
+                    continue
+                break
+        raise SyscallError(
+            error_code=-1,
+            message=f"IPC {method} on {socket_path} failed after retries: {last_exc}",
+            context={"socket": socket_path, "method": method},
+        )
+
+    def _call_once(self, socket_path: str, payload: bytes) -> Any:
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.settimeout(self._timeout_s)
+        try:
+            sock.connect(socket_path)
+            sock.sendall(payload)
+            buf = bytearray()
+            while True:
+                try:
+                    chunk = sock.recv(8192)
+                except socket.timeout:
+                    if buf:
+                        # 已收到的部分尝试解析
+                        try:
+                            return self._extract_result(buf.decode("utf-8"))
+                        except json.JSONDecodeError:
+                            pass
+                    raise
+                if not chunk:
+                    # 对端关闭：尝试解析已收数据
+                    if buf:
+                        try:
+                            return self._extract_result(buf.decode("utf-8"))
+                        except json.JSONDecodeError:
+                            pass
+                    raise ConnectionResetError("daemon closed connection without response")
+                buf += chunk
+                # 立即尝试解析
+                try:
+                    return self._extract_result(buf.decode("utf-8"))
+                except json.JSONDecodeError:
+                    continue
+        finally:
+            try:
+                sock.close()
+            except OSError:
+                pass
+
+    @staticmethod
+    def _extract_result(response_text: str) -> Any:
+        resp = json.loads(response_text)
+        if not isinstance(resp, dict):
+            raise SyscallError(
+                error_code=-1,
+                message=f"IPC malformed response: {response_text[:200]}",
+            )
+        err = resp.get("error")
+        if err:
+            msg = err.get("message", "unknown") if isinstance(err, dict) else str(err)
+            code = err.get("code", -32000) if isinstance(err, dict) else -32000
+            raise SyscallError(
+                error_code=int(code),
+                message=f"daemon error: {msg}",
+                context={"jsonrpc_error": err},
+            )
+        if "result" not in resp:
+            raise SyscallError(
+                error_code=-1,
+                message=f"IPC response missing 'result': {response_text[:200]}",
+            )
+        return resp["result"]
+
+    # ── mem_d 方法 ─────────────────────────────────────
+    def memory_write(self, data: bytes, metadata: Optional[str]) -> str:
+        # data 不一定是 UTF-8 文本；以 latin-1 透传字节，daemon 把 data 当字符串存储
+        data_str = data.decode("utf-8", errors="replace")
+        params: Dict[str, Any] = {"data": data_str}
+        if metadata is not None and metadata != "":
+            try:
+                params["metadata"] = json.loads(metadata)
+            except json.JSONDecodeError:
+                params["metadata"] = metadata
+        result = self._call(self._mem_socket, "write", params)
+        record_id = result.get("record_id") if isinstance(result, dict) else None
+        if not isinstance(record_id, str):
+            raise SyscallError(error_code=-1, message=f"mem.write: bad result {result!r}")
+        return record_id
+
+    def memory_get(self, record_id: str) -> bytes:
+        result = self._call(self._mem_socket, "get", {"record_id": record_id})
+        if not isinstance(result, dict):
+            raise SyscallError(error_code=-1, message=f"mem.get: bad result {result!r}")
+        data = result.get("data")
+        if not isinstance(data, str):
+            raise SyscallError(error_code=CODE_MEMORY_NOT_FOUND,
+                               message=f"mem.get: record not found: {record_id}")
+        return data.encode("utf-8")
+
+    def memory_search(self, query: str, limit: int) -> List[Tuple[str, float]]:
+        result = self._call(self._mem_socket, "search",
+                            {"query": query, "limit": int(limit)})
+        if not isinstance(result, dict):
+            return []
+        items = result.get("results") or []
+        out: List[Tuple[str, float]] = []
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            rid = it.get("record_id")
+            score = it.get("score", 0.0)
+            if isinstance(rid, str):
+                out.append((rid, float(score) if score is not None else 0.0))
+        return out
+
+    def memory_delete(self, record_id: str) -> bool:
+        self._call(self._mem_socket, "delete", {"record_id": record_id})
+        return True
+
+    # ── agent_d 方法 ───────────────────────────────────
+    def agent_spawn(self, agent_spec: str) -> str:
+        try:
+            spec_obj = json.loads(agent_spec)
+            params = {"agent_spec": spec_obj}
+        except json.JSONDecodeError:
+            params = {"agent_spec": agent_spec}
+        result = self._call(self._agent_socket, "spawn", params)
+        agent_id = result.get("agent_id") if isinstance(result, dict) else None
+        if not isinstance(agent_id, str):
+            raise SyscallError(error_code=-1, message=f"agent.spawn: bad result {result!r}")
+        return agent_id
+
+    def agent_terminate(self, agent_id: str) -> bool:
+        self._call(self._agent_socket, "terminate", {"agent_id": agent_id})
+        return True
+
+    def agent_invoke(self, agent_id: str, input_data: str) -> str:
+        result = self._call(self._agent_socket, "invoke",
+                           {"agent_id": agent_id, "input": input_data})
+        output = result.get("output") if isinstance(result, dict) else None
+        if not isinstance(output, str):
+            raise SyscallError(error_code=-1, message=f"agent.invoke: bad result {result!r}")
+        return output
+
+    def agent_list(self) -> List[str]:
+        result = self._call(self._agent_socket, "list", {})
+        if not isinstance(result, dict):
+            return []
+        ids = result.get("agent_ids") or []
+        return [s for s in ids if isinstance(s, str)]
 
 
 class SyscallProxy:
@@ -118,25 +338,77 @@ class SyscallProxy:
         5001: lambda msg, ctx: SyscallError(error_code=5001, message=msg, context=ctx),
     }
 
-    def __init__(self, lib_path: Optional[str] = None, enable_caching: bool = True):
+    def __init__(self, lib_path: Optional[str] = None, enable_caching: bool = True,
+                 backend: str = "auto"):
+        """初始化 SyscallProxy。
+
+        参数:
+            lib_path: libagentrt.so 路径（仅 FFI/auto 后端使用）
+            enable_caching: 是否启用结果缓存
+            backend: 后端选择
+                - "auto": 优先 FFI，找不到库时回退到 IPC（默认）
+                - "ffi":  强制 FFI（原行为，需 libagentrt.so）
+                - "ipc":  直连 mem_d / agent_d 守护进程（不依赖 .so）
+        """
         self._lib = None
         self._cache = {} if enable_caching else None
         self._resource_stack = ExitStack()
         self._lock = threading.Lock()
         self._is_initialized = False
+        self._backend: str = backend
+        self._ipc: Optional[_IpcBackend] = None
+
+        if backend not in ("auto", "ffi", "ipc"):
+            raise InitializationError(
+                message=f"Invalid backend: {backend!r} (expected auto/ffi/ipc)",
+                cause=None,
+            )
 
         try:
-            self._load_library(lib_path)
-            self._setup_function_signatures()
-            self._verify_library_version()
-            self._is_initialized = True
-            logger.info(
-                f"SyscallProxy initialized successfully (library: {self._get_library_name()})")
+            if backend in ("auto", "ffi"):
+                try:
+                    self._load_library(lib_path)
+                    self._setup_function_signatures()
+                    self._verify_library_version()
+                    self._is_initialized = True
+                    self._backend = "ffi"
+                    logger.info(
+                        "SyscallProxy initialized with FFI backend (library: %s)",
+                        self._get_library_name(),
+                    )
+                except Exception as ffi_err:
+                    if backend == "ffi":
+                        raise
+                    # auto 模式：FFI 失败则回退 IPC
+                    logger.info(
+                        "FFI backend unavailable (%s), falling back to IPC backend",
+                        ffi_err,
+                    )
+                    self._init_ipc()
+            else:
+                # backend == "ipc"
+                self._init_ipc()
         except Exception as e:
             self._cleanup_resources()
             raise InitializationError(
-                message="Failed to initialize FFI binding",
-                cause=e
+                message=f"Failed to initialize SyscallProxy (backend={backend})",
+                cause=e,
+            )
+
+    def _init_ipc(self) -> None:
+        """初始化 IPC 后端。"""
+        try:
+            self._ipc = _IpcBackend()
+            self._backend = "ipc"
+            self._is_initialized = True
+            logger.info(
+                "SyscallProxy initialized with IPC backend (mem=%s, agent=%s)",
+                self._ipc._mem_socket, self._ipc._agent_socket,
+            )
+        except Exception as e:
+            raise InitializationError(
+                message="Failed to initialize IPC backend",
+                cause=e,
             )
 
     def _load_library(self, lib_path: Optional[str]) -> None:
@@ -473,10 +745,11 @@ class SyscallProxy:
     # =========================================================================
 
     def memory_write(self, data: bytes, metadata: Optional[str] = None) -> str:
+        if not data or len(data) == 0:
+            raise ValidationError(message="Cannot write empty data", cause=None)
+        if self._backend == "ipc":
+            return self._ipc.memory_write(data, metadata)
         with self._lock:
-            if not data or len(data) == 0:
-                raise ValidationError(message="Cannot write empty data", cause=None)
-
             record_id = c_char_p()
             metadata_bytes = metadata.encode('utf-8') if metadata else None
 
@@ -494,10 +767,11 @@ class SyscallProxy:
                 return record_id_str
 
     def memory_get(self, record_id: str) -> bytes:
+        if not record_id or not isinstance(record_id, str):
+            raise ValidationError(message="Invalid record_id", cause=None)
+        if self._backend == "ipc":
+            return self._ipc.memory_get(record_id)
         with self._lock:
-            if not record_id or not isinstance(record_id, str):
-                raise ValidationError(message="Invalid record_id", cause=None)
-
             data = c_void_p()
             length = c_size_t()
 
@@ -512,10 +786,11 @@ class SyscallProxy:
             return b""
 
     def memory_search(self, query: str, limit: int = 10) -> List[Tuple[str, float]]:
+        if not query or not isinstance(query, str):
+            raise ValidationError(message="Invalid search query", cause=None)
+        if self._backend == "ipc":
+            return self._ipc.memory_search(query, limit)
         with self._lock:
-            if not query or not isinstance(query, str):
-                raise ValidationError(message="Invalid search query", cause=None)
-
             record_ids = POINTER(c_char_p)()
             scores = POINTER(c_float)()
             count = c_size_t()
@@ -545,10 +820,11 @@ class SyscallProxy:
             return results
 
     def memory_delete(self, record_id: str) -> bool:
+        if not record_id or not isinstance(record_id, str):
+            raise ValidationError(message="Invalid record_id", cause=None)
+        if self._backend == "ipc":
+            return self._ipc.memory_delete(record_id)
         with self._lock:
-            if not record_id or not isinstance(record_id, str):
-                raise ValidationError(message="Invalid record_id", cause=None)
-
             error_code = self._lib.airy_sys_memory_delete(
                 record_id.encode('utf-8')
             )
@@ -712,10 +988,11 @@ class SyscallProxy:
     # =========================================================================
 
     def agent_spawn(self, agent_spec: str) -> str:
+        if not agent_spec or not isinstance(agent_spec, str):
+            raise ValidationError(message="Invalid agent_spec", cause=None)
+        if self._backend == "ipc":
+            return self._ipc.agent_spawn(agent_spec)
         with self._lock:
-            if not agent_spec or not isinstance(agent_spec, str):
-                raise ValidationError(message="Invalid agent_spec", cause=None)
-
             agent_id = c_char_p()
             error_code = self._lib.airy_sys_agent_spawn(
                 agent_spec.encode('utf-8'), byref(agent_id)
@@ -728,10 +1005,11 @@ class SyscallProxy:
                 return agent_id_str
 
     def agent_terminate(self, agent_id: str) -> bool:
+        if not agent_id or not isinstance(agent_id, str):
+            raise ValidationError(message="Invalid agent_id", cause=None)
+        if self._backend == "ipc":
+            return self._ipc.agent_terminate(agent_id)
         with self._lock:
-            if not agent_id or not isinstance(agent_id, str):
-                raise ValidationError(message="Invalid agent_id", cause=None)
-
             error_code = self._lib.airy_sys_agent_terminate(
                 agent_id.encode('utf-8')
             )
@@ -740,10 +1018,11 @@ class SyscallProxy:
             return error_code == 0
 
     def agent_invoke(self, agent_id: str, input_data: str) -> str:
+        if not agent_id or not isinstance(agent_id, str):
+            raise ValidationError(message="Invalid agent_id", cause=None)
+        if self._backend == "ipc":
+            return self._ipc.agent_invoke(agent_id, input_data)
         with self._lock:
-            if not agent_id or not isinstance(agent_id, str):
-                raise ValidationError(message="Invalid agent_id", cause=None)
-
             input_bytes = input_data.encode('utf-8')
             result = c_char_p()
 
@@ -758,6 +1037,8 @@ class SyscallProxy:
                 return result_str
 
     def agent_list(self) -> List[str]:
+        if self._backend == "ipc":
+            return self._ipc.agent_list()
         with self._lock:
             agent_ids = POINTER(c_char_p)()
             count = c_size_t()

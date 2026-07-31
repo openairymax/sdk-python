@@ -142,7 +142,7 @@ class ExecutionFrame:
 
 
 @dataclass
-class AgentContext:
+class AppContext:
     """统一的执行上下文，在所有框架间传递"""
     request_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     session_id: str = ""
@@ -188,8 +188,8 @@ class ExecutionContext:
     metadata: Dict[str, Any] = field(default_factory=dict)
     scratchpad: Dict[str, Any] = field(default_factory=dict)
 
-    def to_agent_context(self) -> AgentContext:
-        return AgentContext(
+    def to_app_context(self) -> AppContext:
+        return AppContext(
             request_id=self.request_id or self.context_id,
             session_id=self.session_id or "",
             trace_id=self.trace_id or str(uuid.uuid4()),
@@ -523,7 +523,7 @@ class AgentApplication:
             )
 
         ctx = context or ExecutionContext(input_data=input_data)
-        agent_ctx = ctx.to_agent_context()
+        agent_ctx = ctx.to_app_context()
         agent_ctx.input_data = input_data
 
         try:
@@ -591,7 +591,7 @@ class AgentApplication:
                 execution_time_ms=execution_time
             )
 
-    async def _execute_internal(self, input_data: Any, ctx: AgentContext) -> Any:
+    async def _execute_internal(self, input_data: Any, ctx: AppContext) -> Any:
         """
         内部执行逻辑
 
@@ -619,7 +619,7 @@ class AgentApplication:
         self,
         skill_name: str,
         parameters: Dict[str, Any],
-        ctx: AgentContext
+        ctx: AppContext
     ) -> Any:
         """通过技能框架执行"""
         ctx.push_frame("skill", "execute", skill_name=skill_name)
@@ -657,7 +657,7 @@ class AgentApplication:
         self,
         workflow_id: str,
         variables: Dict[str, Any],
-        ctx: AgentContext
+        ctx: AppContext
     ) -> Any:
         """通过任务框架执行"""
         ctx.push_frame("task", "execute_workflow", workflow_id=workflow_id)
@@ -692,7 +692,7 @@ class AgentApplication:
 
         return result.output
 
-    async def _try_auto_skill(self, input_data: Any, ctx: AgentContext) -> Optional[Any]:
+    async def _try_auto_skill(self, input_data: Any, ctx: AppContext) -> Optional[Any]:
         """尝试自动匹配技能执行"""
         if isinstance(input_data, str):
             search_results = self._skill_registry.search_skills(input_data)
@@ -993,7 +993,7 @@ class AgentApplication:
 __all__ = [
     "AgentApplication",
     "AgentConfig",
-    "AgentContext",
+    "AppContext",
     "ExecutionContext",
     "ExecutionResult",
     "ExecutionFrame",

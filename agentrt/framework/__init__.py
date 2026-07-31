@@ -41,7 +41,7 @@ from .lifecycle import LifecycleManager, AgentState, LifecycleEvent
 from .state import StateManager, StateSnapshot
 from .config import ConfigurationCenter, ConfigSource, ValidationResult
 from .errors import ErrorHandlingFramework, ErrorLevel, ErrorContext, RecoveryStrategy
-from .application import AgentApplication, AgentConfig, ExecutionContext, AgentContext, ExecutionResult, ExecutionFrame, ErrorCode
+from .application import AgentApplication, AgentConfig, ExecutionContext, AppContext, ExecutionResult, ExecutionFrame, ErrorCode
 from .skill import (
     BaseSkill, SkillRegistry, VersionManager,
     SkillExecutionEngine, SkillResultCache,
@@ -75,7 +75,7 @@ __all__ = [
     "AgentApplication",
     "AgentConfig",
     "ExecutionContext",
-    "AgentContext",
+    "AppContext",
     "ExecutionResult",
     "ExecutionFrame",
     "ErrorCode",

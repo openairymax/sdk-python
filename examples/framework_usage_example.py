@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from agentrt.framework import (
     AgentApplication,
     AgentConfig,
-    AgentContext,
+    AppContext,
     ExecutionContext,
     ExecutionResult,
     ErrorCode,
@@ -84,12 +84,12 @@ async def example_basic_usage():
 
 
 async def example_agent_context():
-    """示例2: AgentContext 统一上下文"""
+    """示例2: AppContext 统一上下文"""
     print("\n" + "=" * 60)
-    print("示例2: AgentContext 统一上下文")
+    print("示例2: AppContext 统一上下文")
     print("=" * 60)
 
-    ctx = AgentContext(
+    ctx = AppContext(
         session_id="session-001",
         user_id="user-alice",
         user_permissions=["read", "write", "admin"],
@@ -122,7 +122,7 @@ async def example_agent_context():
         input_data=ctx.input_data
     )
     converted = exec_ctx.to_agent_context()
-    print(f"\n  ExecutionContext -> AgentContext 转换:")
+    print(f"\n  ExecutionContext -> AppContext 转换:")
     print(f"    请求ID匹配: {converted.request_id == ctx.request_id}")
 
 
