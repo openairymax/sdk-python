@@ -62,9 +62,23 @@ logger = logging.getLogger(__name__)
 
 
 # ── IPC 后端常量 ────────────────────────────────────────────────────────
-# 与 agentrt/commons/platform/include/platform.h:130 AIRY_RUNTIME_DIR 对齐
-# 与 agentrt/gateway/src/utils/syscall_router.c:38,41 socket 路径对齐
-_DEFAULT_RUNTIME_DIR = os.environ.get("AIRY_RUNTIME_DIR", "/tmp/agentrt")
+# 与 agentrt/commons/platform/include/platform.h AIRY_HOME 路径体系对齐：
+#   $AIRY_HOME/run/agent.sock、$AIRY_HOME/run/mem.sock（默认 ~/.airymaxrt/run）
+# 与 agentrt/gateway/src/utils/syscall_router.c socket 路径对齐
+
+
+def _airy_home_dir() -> str:
+    """解析 AIRY_HOME（$AIRY_HOME 或 ~/.airymaxrt），与 C 侧 airy_home_dir() 一致。"""
+    home = os.environ.get("AIRY_HOME", "")
+    if home:
+        return home
+    return os.path.join(os.path.expanduser("~"), ".airymaxrt")
+
+
+_AIRY_HOME = _airy_home_dir()
+_DEFAULT_RUNTIME_DIR = os.environ.get(
+    "AIRY_RUNTIME_DIR", os.path.join(_AIRY_HOME, "run")
+)
 _MEM_D_SOCKET = os.environ.get("AIRY_MEM_D_SOCKET", f"{_DEFAULT_RUNTIME_DIR}/mem.sock")
 _AGENT_D_SOCKET = os.environ.get("AIRY_AGENT_D_SOCKET", f"{_DEFAULT_RUNTIME_DIR}/agent.sock")
 
