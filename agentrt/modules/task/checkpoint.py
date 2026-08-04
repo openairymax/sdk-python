@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 
 # AgentRT Python SDK - Checkpoint Manager
-# Version: 0.1.0
+# Version: 0.1.1
 # Last updated: 2026-04-05
 #
 # 检查点管理器，支持长时间任务的断点续传和状态恢复

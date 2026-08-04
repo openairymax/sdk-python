@@ -9,7 +9,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="agentrt",
-    version="0.1.0",
+    version="0.1.1",
     description="AgentRT Python SDK - 官方多语言 SDK 集合",
     long_description=open("README.md", "r", encoding="utf-8").read() if __name__ == "__main__" else "",
     long_description_content_type="text/markdown",
@@ -35,12 +35,13 @@ setup(
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
-        "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: Apache Software License",
+        "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
         "Operating System :: OS Independent",
         "Intended Audience :: Developers",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    license="Apache-2.0",
+    license="AGPL-3.0-or-later OR Apache-2.0",
     keywords="agentrt sdk client agent memory session skill",
     project_urls={
         "Documentation": "https://github.com/spharx/agentrt/tree/main/sdk/python",

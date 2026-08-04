@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentrt"
-version = "0.1.0"
+version = "0.1.1"
 description = "AgentRT Python SDK - 官方多语言 SDK 集合"
 authors = ["SPHARX Ltd."]
 license = "AGPL-3.0-or-later OR Apache-2.0"

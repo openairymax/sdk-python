@@ -79,7 +79,7 @@ class CostTrackerHook(BaseHook):
     """
 
     name = "cost_tracker"
-    version = "0.1.0"
+    version = "0.1.1"
     priority = 50
 
     def __init__(self, config: Optional[dict] = None):

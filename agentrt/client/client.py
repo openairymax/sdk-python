@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 
 # AgentRT Python SDK - Client Implementation
-# Version: 0.1.0
+# Version: 0.1.1
 # Last updated: 2026-04-05
 
 """
@@ -65,7 +65,7 @@ class ClientConfig:
     max_connections: int = 100
     idle_conn_timeout: float = 90.0
     api_key: Optional[str] = None
-    user_agent: str = "AgentRT-Python-tools/0.1.0"
+    user_agent: str = "AgentRT-Python-tools/0.1.1"
     headers: Dict[str, str] = field(default_factory=dict)
 
     def validate(self) -> None:

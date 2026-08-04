@@ -83,7 +83,7 @@ class TestBaseHook:
     def test_default_attributes(self):
         hook = BaseHook()
         assert hook.name == "base_hook"
-        assert hook.version == "0.1.0"
+        assert hook.version == "0.1.1"
         assert hook.priority == 50
         assert hook.enabled is True
 
@@ -91,7 +91,7 @@ class TestBaseHook:
         hook = BaseHook()
         info = hook.get_hook_info()
         assert info["name"] == "base_hook"
-        assert info["version"] == "0.1.0"
+        assert info["version"] == "0.1.1"
         assert info["priority"] == 50
         assert info["enabled"] is True
         assert "on_agent_start" in info["events"]
@@ -129,7 +129,7 @@ class TestAuditHook:
     def test_name_and_version(self):
         hook = AuditHook()
         assert hook.name == "audit"
-        assert hook.version == "0.1.0"
+        assert hook.version == "0.1.1"
         assert hook.priority == 100
 
     def test_on_agent_start_writes_log(self):
@@ -255,7 +255,7 @@ class TestCostTrackerHook:
     def test_name_and_version(self):
         hook = CostTrackerHook()
         assert hook.name == "cost_tracker"
-        assert hook.version == "0.1.0"
+        assert hook.version == "0.1.1"
         assert hook.priority == 50
 
     def test_compute_cost_openai_gpt4o(self):
@@ -388,7 +388,7 @@ class TestSecurityReminderHook:
     def test_name_and_version(self):
         hook = SecurityReminderHook()
         assert hook.name == "security_reminder"
-        assert hook.version == "0.1.0"
+        assert hook.version == "0.1.1"
         assert hook.priority == 90
 
     def test_default_level_is_standard(self):
@@ -487,7 +487,7 @@ class TestPromptInjectorHook:
     def test_name_and_version(self):
         hook = PromptInjectorHook()
         assert hook.name == "prompt_injector"
-        assert hook.version == "0.1.0"
+        assert hook.version == "0.1.1"
         assert hook.priority == 60
 
     def test_no_fragments_skips_injection(self):

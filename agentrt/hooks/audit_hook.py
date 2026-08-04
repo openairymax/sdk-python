@@ -49,7 +49,7 @@ class AuditHook(BaseHook):
     """
 
     name = "audit"
-    version = "0.1.0"
+    version = "0.1.1"
     priority = 100  # Run first to capture all actions
 
     def __init__(self, config: Optional[dict] = None):

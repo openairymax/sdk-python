@@ -53,7 +53,7 @@ class BaseHook(ABC):
     """
 
     name: str = "base_hook"
-    version: str = "0.1.0"
+    version: str = "0.1.1"
     priority: int = 50  # 0=lowest, 100=highest
     enabled: bool = True
 

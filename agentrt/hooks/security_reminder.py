@@ -103,7 +103,7 @@ class SecurityReminderHook(BaseHook):
     """
 
     name = "security_reminder"
-    version = "0.1.0"
+    version = "0.1.1"
     priority = 90  # Run before most hooks to ensure security context is set
 
     def __init__(self, config: Optional[dict] = None):

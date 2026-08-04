@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 
 # AgentRT Application Framework
-# Version: 0.1.0
+# Version: 0.1.1
 # Last updated: 2026-04-11
 
 """
@@ -66,7 +66,7 @@ from .plugin import (
     ResolutionResult, ReloadResult, get_plugin_registry,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __author__ = "SPHARX Ltd."
 
 __all__ = [

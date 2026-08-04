@@ -79,7 +79,7 @@ class PromptInjectorHook(BaseHook):
     """
 
     name = "prompt_injector"
-    version = "0.1.0"
+    version = "0.1.1"
     priority = 60  # Run after security reminder but before formatting hooks
 
     def __init__(self, config: Optional[dict] = None):

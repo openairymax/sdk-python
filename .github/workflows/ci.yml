@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  ci:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,24 +30,15 @@ jobs:
             echo "[NO] LICENSE missing" && exit 1
           fi
 
-      - name: README check
+      - name: Install package with test extras
         run: |
-          if [ -f "README.md" ] || [ -f "README_zh.md" ]; then
-            echo "[OK] README present"
-          else
-            echo "[WARN] README missing"
-          fi
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
 
-      - name: NOTICE check
+      - name: Run test suite (pytest)
         run: |
-          if [ -f "NOTICE" ]; then
-            echo "[OK] NOTICE present"
-          else
-            echo "[WARN] NOTICE missing"
-          fi
-
-      - name: Python syntax check
-        run: |
-          find . -name "*.py" -not -path "./build/*" -not -path "./.venv/*" | while read f; do
-            python -m py_compile "$f" && echo "[OK] $f" || echo "[NO] $f syntax error"
-          done
+          # 真实运行 SDK 测试，任何测试失败都会使 job 失败（不使用 || echo 吞掉失败）。
+          # 注意：tests/ 下的集成/端到端用例（test_integration_e2e.py 等）需要连接
+          # 运行中的 AgentRT Gateway；CI 无网关环境下此类用例应在测试代码内以
+          # skip/skipif 标记跳过，而不是在 workflow 中抑制失败。
+          python -m pytest tests/ -v

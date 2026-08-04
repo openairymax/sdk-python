@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 
 # AgentRT Python SDK - OpenTelemetry 集成
-# Version: 0.1.0
+# Version: 0.1.1
 # Last updated: 2026-04-05
 #
 # OpenTelemetry 可观测性集成
@@ -33,7 +33,7 @@ class TelemetryConfig:
     def __init__(
         self,
         service_name: str = "agentrt-toolkit",
-        service_version: str = "0.1.0",
+        service_version: str = "0.1.1",
         enabled: bool = True,
         export_endpoint: Optional[str] = None,
         sample_rate: float = 1.0

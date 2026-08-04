@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 def test_imports():
     """测试所有模块导入"""
     print("=" * 60)
-    print("AgentRT Python SDK v0.1.0 模块导入测试")
+    print("AgentRT Python SDK v0.1.1 模块导入测试")
     print("=" * 60)
     
     # 测试 client 模块

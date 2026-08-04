@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 
 # AgentRT Python SDK - 长时间任务示例（带检查点）
-# Version: 0.1.0
+# Version: 0.1.1
 # Last updated: 2026-04-05
 #
 # 演示如何使用 CheckpointManager 实现长时间任务的断点续传

@@ -145,7 +145,7 @@ class ToolMetadata:
     """Metadata describing a tool for registration and discovery."""
     name: str
     description: str = ""
-    version: str = "0.1.0"
+    version: str = "0.1.1"
     parameters: List[ToolParameter] = field(default_factory=list)
     returns: str = "any"
     category: str = "general"
@@ -362,7 +362,7 @@ class SkillDefinition:
     """Definition of a skill for registration and discovery."""
     name: str
     description: str = ""
-    version: str = "0.1.0"
+    version: str = "0.1.1"
     category: str = "general"
     tags: List[str] = field(default_factory=list)
     input_schema: Dict[str, Any] = field(default_factory=dict)

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 
 # AgentRT Python SDK - API 响应处理工具
-# Version: 0.1.0
+# Version: 0.1.1
 # Last updated: 2026-04-05
 #
 # 提供统一的 API 响应处理函数，消除重复代码

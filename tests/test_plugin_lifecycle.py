@@ -20,7 +20,7 @@ from agentrt.framework.plugins.metrics_plugin import MetricsPlugin
 
 
 class SimplePlugin(BasePlugin):
-    __version__ = "0.1.0"
+    __version__ = "0.1.1"
 
     def __init__(self):
         super().__init__()

@@ -3,7 +3,7 @@
 
 # AgentRT SDK 跨平台兼容性测试
 # 验证: Python/Node/Go/Rust 版本兼容 + 导入链 + 编译矩阵
-# Version: 0.1.0
+# Version: 0.1.1
 
 import sys
 import os
