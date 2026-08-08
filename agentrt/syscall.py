@@ -307,19 +307,22 @@ class _IpcBackend:
         return [s for s in ids if isinstance(s, str)]
 
     # ── tool_d 方法 ─────────────────────────────────────
-    def tool_execute(self, tool_id: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def tool_execute(self, tool_id: str, params: Optional[Dict[str, Any]] = None,
+                     agent_id: Optional[str] = None) -> Dict[str, Any]:
         """调用 tool_d execute_tool 执行内置工具。
 
         tool_id ∈ {fs_read, fs_write, fs_list, shell_run, web_fetch}。
+        agent_id 为调用方 Agent 身份（如 "coding_v1"）：tool_d 以该主体做
+        ACL 判定，未授权工具将进入交互式审批（AIRY_TOOL_APPROVAL_MODE=interactive）。
         返回 daemon 原始结果::
 
             {"success": bool, "output": str, "error": str, "exit_code": int}
         """
-        result = self._call(
-            self._tool_socket,
-            "execute_tool",
-            {"tool_id": tool_id, "params": params if isinstance(params, dict) else {}},
-        )
+        call_params: Dict[str, Any] = {"tool_id": tool_id,
+                                       "params": params if isinstance(params, dict) else {}}
+        if agent_id:
+            call_params["agent_id"] = agent_id
+        result = self._call(self._tool_socket, "execute_tool", call_params)
         if not isinstance(result, dict):
             raise SyscallError(error_code=-1,
                                message=f"tool.execute_tool: bad result {result!r}")
@@ -1103,11 +1106,16 @@ class SyscallProxy:
     # Tool execution (tool_d)
     # =========================================================================
 
-    def tool_execute(self, tool_id: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def tool_execute(self, tool_id: str, params: Optional[Dict[str, Any]] = None,
+                     agent_id: Optional[str] = None) -> Dict[str, Any]:
         """调用 tool_d 执行内置工具（fs_read/fs_write/fs_list/shell_run/web_fetch）。
 
         tool_d 通过 Unix socket 暴露 ``execute_tool`` 方法，libagentrt 静态
         构建无对应 FFI 符号，故仅 IPC 后端支持；FFI 模式下抛 ValidationError。
+
+        agent_id 为调用方 Agent 身份（如 "coding_v1"），tool_d 以该主体做
+        ACL 判定；未授权工具在交互式审批模式（AIRY_TOOL_APPROVAL_MODE=
+        interactive）下进入 pending 等待人工决议。
 
         返回 daemon 原始结果::
 
@@ -1120,7 +1128,7 @@ class SyscallProxy:
                 message=f"tool_execute requires the IPC backend, current: {self._backend!r}",
                 cause=None,
             )
-        return self._ipc.tool_execute(tool_id, params)
+        return self._ipc.tool_execute(tool_id, params, agent_id)
 
     # =========================================================================
     # Telemetry
