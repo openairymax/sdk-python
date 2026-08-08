@@ -6,8 +6,8 @@
 """``_IpcBackend`` pytest 套件 — Unix socket + JSON-RPC 2.0 后端
 
 覆盖 ``agentrt/syscall.py`` 中 ``_IpcBackend`` 的全部公共方法
-(mem.write/get/search/delete + agent.spawn/terminate/invoke/list)，
-重试容错 (BrokenPipe/ConnectionReset/socket.timeout) 与
+(mem.write/get/search/delete + agent.spawn/terminate/invoke/list +
+tool.execute_tool)，重试容错 (BrokenPipe/ConnectionReset/socket.timeout) 与
 ``_extract_result`` 错误解析。
 
 测试不依赖真实 mem_d / agent_d 守护进程：通过 mock ``_call_once``
@@ -196,6 +196,49 @@ def test_agent_list_filters_non_string():
         {"agent_ids": ["a1", 42, None, "a2"]}
     )
     assert backend.agent_list() == ["a1", "a2"]
+
+
+# ── tool_d 方法 ──────────────────────────────────────────
+
+
+def test_tool_execute_returns_result_dict():
+    """tool_execute 返回 daemon 原始结果 dict（success/output/error/exit_code）。"""
+    backend = _make_backend_with_result(
+        {"success": True, "output": "file content", "error": "", "exit_code": 0}
+    )
+    result = backend.tool_execute("fs_read", {"path": "/tmp/a.txt"})
+    assert result["success"] is True
+    assert result["output"] == "file content"
+    params = _captured_params(backend._call_once)
+    assert params["tool_id"] == "fs_read"
+    assert params["params"] == {"path": "/tmp/a.txt"}
+
+
+def test_tool_execute_non_dict_params_coerced_to_empty():
+    """tool_execute 的 params 非 dict 时，应透传为空对象（与 tool_d 兼容）。"""
+    backend = _make_backend_with_result(
+        {"success": False, "error": "missing params", "exit_code": 1}
+    )
+    backend.tool_execute("shell_run", "ls -la")
+    params = _captured_params(backend._call_once)
+    assert params["params"] == {}
+
+
+def test_tool_execute_bad_result_raises():
+    """daemon 返回结果非 dict 时，SDK 抛 SyscallError。"""
+    backend = _make_backend_with_result(["not", "a", "dict"])
+    with pytest.raises(SyscallError):
+        backend.tool_execute("fs_read", {"path": "/tmp/a.txt"})
+
+
+def test_tool_execute_uses_tool_socket():
+    """tool_execute 应直连 tool.sock（默认 $AIRY_RUNTIME_DIR/tool.sock）。"""
+    backend = _make_backend_with_result(
+        {"success": True, "output": "ok", "error": "", "exit_code": 0}
+    )
+    backend.tool_execute("fs_list", {"path": "/tmp"})
+    args, _kwargs = backend._call_once.call_args
+    assert args[0].endswith("tool.sock")
 
 
 # ── 重试容错 ──────────────────────────────────────────────

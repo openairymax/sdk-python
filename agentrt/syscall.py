@@ -63,8 +63,10 @@ logger = logging.getLogger(__name__)
 
 # ── IPC 后端常量 ────────────────────────────────────────────────────────
 # 与 agentrt/commons/platform/include/platform.h AIRY_HOME 路径体系对齐：
-#   $AIRY_HOME/run/agent.sock、$AIRY_HOME/run/mem.sock（默认 ~/.airymaxrt/run）
+#   $AIRY_HOME/run/agent.sock、$AIRY_HOME/run/mem.sock、$AIRY_HOME/run/tool.sock
+#   （默认 ~/.airymaxrt/run）
 # 与 agentrt/gateway/src/utils/syscall_router.c socket 路径对齐
+# （tool.sock 环境变量名对齐 gateway_business_handler.c 的 AIRY_TOOL_SOCK）
 
 
 def _airy_home_dir() -> str:
@@ -81,6 +83,7 @@ _DEFAULT_RUNTIME_DIR = os.environ.get(
 )
 _MEM_D_SOCKET = os.environ.get("AIRY_MEM_D_SOCKET", f"{_DEFAULT_RUNTIME_DIR}/mem.sock")
 _AGENT_D_SOCKET = os.environ.get("AIRY_AGENT_D_SOCKET", f"{_DEFAULT_RUNTIME_DIR}/agent.sock")
+_TOOL_D_SOCKET = os.environ.get("AIRY_TOOL_SOCK", f"{_DEFAULT_RUNTIME_DIR}/tool.sock")
 
 # 偶发 BrokenPipe 重试次数（daemon EPOLLET + MSG_DONTWAIT 时序窗口）
 _IPC_MAX_RETRIES = 3
@@ -111,14 +114,17 @@ class _IpcBackend:
 
     mem_d 方法：write / search / get / delete
     agent_d 方法：spawn / terminate / invoke / list
+    tool_d 方法：execute_tool（tool_id + params → {success, output, error, exit_code}）
     """
 
     def __init__(self,
                  mem_socket: str = _MEM_D_SOCKET,
                  agent_socket: str = _AGENT_D_SOCKET,
+                 tool_socket: str = _TOOL_D_SOCKET,
                  timeout_s: float = _IPC_DEFAULT_TIMEOUT_S):
         self._mem_socket = mem_socket
         self._agent_socket = agent_socket
+        self._tool_socket = tool_socket
         self._timeout_s = timeout_s
         self._lock = threading.Lock()
 
@@ -300,6 +306,25 @@ class _IpcBackend:
         ids = result.get("agent_ids") or []
         return [s for s in ids if isinstance(s, str)]
 
+    # ── tool_d 方法 ─────────────────────────────────────
+    def tool_execute(self, tool_id: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """调用 tool_d execute_tool 执行内置工具。
+
+        tool_id ∈ {fs_read, fs_write, fs_list, shell_run, web_fetch}。
+        返回 daemon 原始结果::
+
+            {"success": bool, "output": str, "error": str, "exit_code": int}
+        """
+        result = self._call(
+            self._tool_socket,
+            "execute_tool",
+            {"tool_id": tool_id, "params": params if isinstance(params, dict) else {}},
+        )
+        if not isinstance(result, dict):
+            raise SyscallError(error_code=-1,
+                               message=f"tool.execute_tool: bad result {result!r}")
+        return result
+
 
 class SyscallProxy:
     """High-performance FFI proxy for AgentRT system calls.
@@ -416,8 +441,8 @@ class SyscallProxy:
             self._backend = "ipc"
             self._is_initialized = True
             logger.info(
-                "SyscallProxy initialized with IPC backend (mem=%s, agent=%s)",
-                self._ipc._mem_socket, self._ipc._agent_socket,
+                "SyscallProxy initialized with IPC backend (mem=%s, agent=%s, tool=%s)",
+                self._ipc._mem_socket, self._ipc._agent_socket, self._ipc._tool_socket,
             )
         except Exception as e:
             raise InitializationError(
@@ -1073,6 +1098,29 @@ class SyscallProxy:
                 self._free_c_ptr(agent_ids)
 
             return result
+
+    # =========================================================================
+    # Tool execution (tool_d)
+    # =========================================================================
+
+    def tool_execute(self, tool_id: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """调用 tool_d 执行内置工具（fs_read/fs_write/fs_list/shell_run/web_fetch）。
+
+        tool_d 通过 Unix socket 暴露 ``execute_tool`` 方法，libagentrt 静态
+        构建无对应 FFI 符号，故仅 IPC 后端支持；FFI 模式下抛 ValidationError。
+
+        返回 daemon 原始结果::
+
+            {"success": bool, "output": str, "error": str, "exit_code": int}
+        """
+        if not tool_id or not isinstance(tool_id, str):
+            raise ValidationError(message="Invalid tool_id", cause=None)
+        if self._backend != "ipc":
+            raise ValidationError(
+                message=f"tool_execute requires the IPC backend, current: {self._backend!r}",
+                cause=None,
+            )
+        return self._ipc.tool_execute(tool_id, params)
 
     # =========================================================================
     # Telemetry
