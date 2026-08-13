@@ -179,30 +179,37 @@ class _IpcBackend:
                 except socket.timeout:
                     if buf:
                         # 已收到的部分尝试解析
-                        try:
-                            return self._extract_result(buf.decode("utf-8"))
-                        except json.JSONDecodeError:
-                            pass
+                        result = self._try_parse(buf)
+                        if result is not None:
+                            return result
                     raise
                 if not chunk:
                     # 对端关闭：尝试解析已收数据
                     if buf:
-                        try:
-                            return self._extract_result(buf.decode("utf-8"))
-                        except json.JSONDecodeError:
-                            pass
+                        result = self._try_parse(buf)
+                        if result is not None:
+                            return result
                     raise ConnectionResetError("daemon closed connection without response")
                 buf += chunk
-                # 立即尝试解析
-                try:
-                    return self._extract_result(buf.decode("utf-8"))
-                except json.JSONDecodeError:
-                    continue
+                # 立即尝试解析；分块边界可能截断多字节 UTF-8 字符，故解析
+                # 尝试使用宽松解码（errors="replace"），仅在收到完整响应时
+                # 严格解析——完整字节串拼接后不受分块边界影响。
+                result = self._try_parse(buf)
+                if result is not None:
+                    return result
         finally:
             try:
                 sock.close()
             except OSError:
                 pass
+
+    @staticmethod
+    def _try_parse(buf: bytearray):
+        """尝试把已收字节解析为 JSON-RPC 响应；不完整/截断返回 None。"""
+        try:
+            return _IpcBackend._extract_result(buf.decode("utf-8", errors="replace"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return None
 
     @staticmethod
     def _extract_result(response_text: str) -> Any:
