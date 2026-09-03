@@ -2,7 +2,7 @@
 
 # Airymax Python SDK
 
-[![Version](https://img.shields.io/badge/version-0.1.1-5a6b7e)](https://atomgit.com/openairymax/sdk-python)
+[![Version](https://img.shields.io/badge/version-0.1.9-5a6b7e)](https://atomgit.com/openairymax/sdk-python)
 [![License](https://img.shields.io/badge/license-AGPL--3.0+Apache--2.0-4a90d9)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org)
 
@@ -184,7 +184,7 @@ pytest tests/test_benchmark_performance.py -v
 
 ## Branch Strategy
 
-This leaf repository is developed on **`feature/official-hubs-01`**. The aggregating `sdk` management repo stays on `main`.
+This leaf repository is developed on **`develop/hubs-01`**; its `main` is a release snapshot. The aggregating `sdk` management repo develops directly on `main`.
 
 ## License
 
