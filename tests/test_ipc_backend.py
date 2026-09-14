@@ -14,7 +14,7 @@ tool.execute_tool)，重试容错 (BrokenPipe/ConnectionReset/socket.timeout) �
 方法直接返回预设 result dict 或抛出指定异常，验证各公共方法的
 参数封装、结果解析与重试逻辑。
 
-对齐 ``docs-closed/agentrt/01-designs/airymax-agent-standard.md`` §10
+对齐 ``airymax-agent-standard.md`` §10
 验证清单 "_IpcBackend pytest 全绿"。
 """
 
