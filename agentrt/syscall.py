@@ -313,6 +313,10 @@ class _IpcBackend:
         ids = result.get("agent_ids") or []
         return [s for s in ids if isinstance(s, str)]
 
+    def agent_vocab(self) -> Any:
+        """agent_d vocab：执行体角色词汇表（roles/aliases/readonly/fallback）。"""
+        return self._call(self._agent_socket, "vocab", {})
+
     # ── tool_d 方法 ─────────────────────────────────────
     def tool_execute(self, tool_id: str, params: Optional[Dict[str, Any]] = None,
                      agent_id: Optional[str] = None) -> Dict[str, Any]:
@@ -1108,6 +1112,20 @@ class SyscallProxy:
                 self._free_c_ptr(agent_ids)
 
             return result
+
+    def agent_vocab(self) -> Dict[str, Any]:
+        """获取 agent_d 执行体角色词汇表（roles/aliases/readonly/fallback）。
+
+        词汇表 SSoT 由 daemons/common 的 agent_vocab 承载，仅 IPC 后端
+        可直达 agent_d；FFI 后端不支持时抛 SyscallError，调用方自行回退。
+        """
+        if self._backend != "ipc" or self._ipc is None:
+            raise SyscallError(
+                error_code=-1,
+                message="agent_vocab requires the IPC backend",
+                context={"backend": self._backend},
+            )
+        return self._ipc.agent_vocab()
 
     # =========================================================================
     # Tool execution (tool_d)
