@@ -273,12 +273,12 @@ class TestCostTrackerHook:
     def test_compute_cost_deepseek(self):
         hook = CostTrackerHook()
         ctx = self.make_ctx(
-            metadata={"model": "deepseek-chat", "provider": "deepseek"}
+            metadata={"model": "deepseek-flash", "provider": "deepseek"}
         )
         usage = {"input_tokens": 1000, "output_tokens": 1000}
         result = hook.on_llm_response(ctx, usage=usage)
-        # deepseek-chat: input=$0.00027/K, output=$0.0011/K
-        assert result.metadata["cost_usd"] == pytest.approx(0.00137)
+        # deepseek-flash: input=$0.00015/K, output=$0.0006/K
+        assert result.metadata["cost_usd"] == pytest.approx(0.00075)
 
     def test_compute_cost_local_free(self):
         hook = CostTrackerHook()

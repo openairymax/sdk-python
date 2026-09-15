@@ -61,9 +61,9 @@ DEFAULT_PRICING = {
         "default": {"input": 0.0035, "output": 0.0105},
     },
     "deepseek": {
-        "deepseek-chat": {"input": 0.00027, "output": 0.0011},
+        "deepseek-flash": {"input": 0.00015, "output": 0.0006},
         "deepseek-reasoner": {"input": 0.00055, "output": 0.00219},
-        "default": {"input": 0.00027, "output": 0.0011},
+        "default": {"input": 0.00015, "output": 0.0006},
     },
     "local": {
         "default": {"input": 0.0, "output": 0.0},
