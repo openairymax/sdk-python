@@ -339,6 +339,23 @@ class _IpcBackend:
                                message=f"tool.execute_tool: bad result {result!r}")
         return result
 
+    def tool_list(self, include_denied: bool = False) -> List[Dict[str, Any]]:
+        """列出 tool_d 工具目录（C-16 目录 SSoT）。
+
+        返回条目形如::
+
+            {"id": str, "description": str, "input_schema": {...},
+             "available": bool, "denied_reason": str}
+
+        策略侧据此生成 function-calling schema，避免维护平行静态表。
+        """
+        result = self._call(self._tool_socket, "list_tools",
+                            {"include_denied": bool(include_denied)})
+        if not isinstance(result, list):
+            raise SyscallError(error_code=-1,
+                               message=f"tool.list_tools: bad result {result!r}")
+        return [entry for entry in result if isinstance(entry, dict)]
+
 
 class SyscallProxy:
     """High-performance FFI proxy for AgentRT system calls.
@@ -1154,6 +1171,19 @@ class SyscallProxy:
                 cause=None,
             )
         return self._ipc.tool_execute(tool_id, params, agent_id)
+
+    def tool_list(self, include_denied: bool = False) -> List[Dict[str, Any]]:
+        """列出 tool_d 工具目录（仅 IPC 后端支持）。
+
+        目录由 tool_d 注册表生成，是「注册表 ↔ 模型可调用 schema」的唯一
+        来源；FFI 后端无对应符号，故显式拒绝而不是返回空列表。
+        """
+        if self._backend != "ipc":
+            raise ValidationError(
+                message=f"tool_list requires the IPC backend, current: {self._backend!r}",
+                cause=None,
+            )
+        return self._ipc.tool_list(include_denied)
 
     # =========================================================================
     # Telemetry
