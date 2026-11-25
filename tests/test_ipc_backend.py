@@ -34,9 +34,13 @@ sys.path.insert(
 from agentrt.syscall import (  # noqa: E402
     _IpcBackend,
     SyscallError,
+    SyscallProxy,
     _IPC_MAX_RETRIES,
 )
-from agentrt.exceptions import CODE_MEMORY_NOT_FOUND  # noqa: E402
+from agentrt.exceptions import (  # noqa: E402
+    CODE_MEMORY_NOT_FOUND,
+    ValidationError,
+)
 
 
 # ── 辅助工具 ──────────────────────────────────────────────
@@ -332,3 +336,80 @@ def test_extract_result_missing_result_field():
     with pytest.raises(SyscallError) as exc_info:
         _IpcBackend._extract_result('{"jsonrpc":"2.0","id":1}')
     assert "missing 'result'" in exc_info.value.message
+
+
+# ── 通用 svc_call ────────────────────────────────────────
+
+
+def test_svc_call_routes_to_mem_socket():
+    """daemon=mem 应直连 mem.sock，params 原样下发，result 原样返回。"""
+    backend = _make_backend_with_result({"ok": True})
+    assert backend.svc_call("mem", "stats", {"k": "v"}) == {"ok": True}
+    args, _kwargs = backend._call_once.call_args
+    assert args[0].endswith("mem.sock")
+    assert _captured_params(backend._call_once) == {"k": "v"}
+
+
+def test_svc_call_routes_to_agent_socket():
+    """daemon=agent 应直连 agent.sock，list 结果原样返回。"""
+    backend = _make_backend_with_result(["a1", "a2"])
+    assert backend.svc_call("agent", "status") == ["a1", "a2"]
+    args, _kwargs = backend._call_once.call_args
+    assert args[0].endswith("agent.sock")
+
+
+def test_svc_call_routes_to_tool_socket():
+    """daemon=tool 应直连 tool.sock。"""
+    backend = _make_backend_with_result({"ok": True})
+    backend.svc_call("tool", "metrics")
+    args, _kwargs = backend._call_once.call_args
+    assert args[0].endswith("tool.sock")
+
+
+def test_svc_call_none_params_becomes_empty_object():
+    """params 省略时按空对象下发（JSON-RPC 要求 object 形态）。"""
+    backend = _make_backend_with_result({})
+    backend.svc_call("mem", "stats")
+    assert _captured_params(backend._call_once) == {}
+
+
+def test_svc_call_rejects_unknown_daemon():
+    """daemon 名不在 mem/agent/tool 内时抛 ValidationError，且不下发。"""
+    backend = _make_backend_with_result({})
+    with pytest.raises(ValidationError):
+        backend.svc_call("llm", "status")
+    assert backend._call_once.call_count == 0
+
+
+def test_svc_call_rejects_empty_method():
+    """method 为空串时抛 ValidationError，且不下发。"""
+    backend = _make_backend_with_result({})
+    with pytest.raises(ValidationError):
+        backend.svc_call("agent", "")
+    assert backend._call_once.call_count == 0
+
+
+def test_proxy_svc_call_delegates_to_ipc():
+    """SyscallProxy.svc_call 在 IPC 后端下委派给 _IpcBackend.svc_call。"""
+    proxy = object.__new__(SyscallProxy)
+    proxy._backend = "ipc"
+    proxy._ipc = _make_backend_with_result({"x": 1})
+    assert proxy.svc_call("status") == {"x": 1}
+
+
+def test_proxy_svc_call_requires_ipc_backend():
+    """FFI 后端没有通用派发面，svc_call 抛 SyscallError 而非返回空值。"""
+    proxy = object.__new__(SyscallProxy)
+    proxy._backend = "ffi"
+    proxy._ipc = None
+    with pytest.raises(SyscallError):
+        proxy.svc_call("status")
+
+
+def test_proxy_svc_call_rejects_non_dict_params():
+    """params 非 dict（非 None）时抛 ValidationError。"""
+    proxy = object.__new__(SyscallProxy)
+    proxy._backend = "ipc"
+    proxy._ipc = _make_backend_with_result({})
+    with pytest.raises(ValidationError):
+        proxy.svc_call("status", ["not", "a", "dict"])

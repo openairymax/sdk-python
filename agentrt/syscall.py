@@ -356,6 +356,27 @@ class _IpcBackend:
                                message=f"tool.list_tools: bad result {result!r}")
         return [entry for entry in result if isinstance(entry, dict)]
 
+    def svc_call(self, daemon: str, method: str,
+                 params: Optional[Dict[str, Any]] = None) -> Any:
+        """按守护进程名路由的通用 JSON-RPC 调用，result 原样返回。
+
+        分域方法覆盖不到的已注册方法由此直达：参数不做语义改写，
+        失败仍按 JSON-RPC error 走 ``_extract_result`` 的既有解析。
+        """
+        sockets = {
+            "mem": self._mem_socket,
+            "agent": self._agent_socket,
+            "tool": self._tool_socket,
+        }
+        if daemon not in sockets:
+            raise ValidationError(
+                message=f"Invalid daemon: {daemon!r}",
+                cause=None,
+            )
+        if not method or not isinstance(method, str):
+            raise ValidationError(message="Invalid method", cause=None)
+        return self._call(sockets[daemon], method, params or {})
+
 
 class SyscallProxy:
     """High-performance FFI proxy for AgentRT system calls.
@@ -1184,6 +1205,27 @@ class SyscallProxy:
                 cause=None,
             )
         return self._ipc.tool_list(include_denied)
+
+    def svc_call(self, method: str, params: Optional[Dict[str, Any]] = None,
+                 daemon: str = "agent") -> Any:
+        """通用服务调用入口：给 daemon 名与方法名，参数下发、结果原样返回。
+
+        与分域方法的分工：分域方法固定参数封装与结果解析；本入口面向
+        daemon 新注册、SDK 尚未分域封装的方法，不做语义改写。FFI 后端
+        没有通用派发面，调用即抛 SyscallError（与 agent_vocab 同口径），
+        不返回空值冒充成功。
+        """
+        if not method or not isinstance(method, str):
+            raise ValidationError(message="Invalid method", cause=None)
+        if params is not None and not isinstance(params, dict):
+            raise ValidationError(message="Invalid params", cause=None)
+        if self._backend != "ipc" or self._ipc is None:
+            raise SyscallError(
+                error_code=-1,
+                message="svc_call requires the IPC backend",
+                context={"backend": self._backend},
+            )
+        return self._ipc.svc_call(daemon, method, params)
 
     # =========================================================================
     # Telemetry
